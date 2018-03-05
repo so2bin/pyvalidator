@@ -6,11 +6,16 @@
 #
 import re
 import json
+import datetime
+from collections import Iterable
 
 _STR_IPV4 = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
 
 _RE_EMAIL = re.compile(r'[^\._][\w\._-]+@(?:[A-Za-z0-9]+\.)+[A-Za-z]+$')
-_RE_PHONE = re.compile("^[1][34578][0-9]{9}$")
+# 手机
+_RE_MOBILEPHONE = re.compile("^[1][34578][0-9]{9}$")
+# 座机
+_RE_PHONE = re.compile("^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$")
 _RE_URL = re.compile(r"".join([
         r'^(?:http|ftp)s?://', # http:// or https://
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|', #domain...
@@ -20,8 +25,11 @@ _RE_URL = re.compile(r"".join([
         r'(?:/?|[/?]\S+)$']), re.IGNORECASE)
 _RE_MONGOID = re.compile(r'^[a-f0-9]{24}$')
 _RE_IPV4 = re.compile(_STR_IPV4)
+_DATETIME_DEFAULT = "%Y-%m-%d %H:%M:%S"
+_DATE_DEFAULT = "%Y-%m-%d"
 
-__all__ = ['isEmail', 'isPhone', 'isUrl', 'isMongoId', 'isIPV4', 'VType', 'Validator']
+__all__ = ['isEmail', 'isMobilePhone', 'isPhone', 'isUrl', 'isMongoId', 'isIPV4', 'VType', 'Validator']
+
 
 def isEmail(s):
     if isinstance(s, str):
@@ -30,11 +38,28 @@ def isEmail(s):
     return False
 
 
-def isPhone(s):
+def isMobilePhone(s):
+    """
+    手机号
+    """
     if isinstance(s, int):
         s = str(s)
     if isinstance(s, str):
         if _RE_PHONE.match(s):
+            return True
+    return False
+
+
+def isPhone(s):
+    """
+    座机或手机号
+    """
+    if isinstance(s, int):
+        s = str(s)
+    if isinstance(s, str):
+        if _RE_PHONE.match(s):
+            return True
+        elif _RE_MOBILEPHONE.match(s):
             return True
     return False
 
@@ -76,9 +101,14 @@ class VType(object):
     URL = 7
     JSON = 8
     MOBILEPHONE = 9
-    MONGOID = 10
-    IPV4 = 11
-    IPV6 = 12
+    PHONE = 10   # 手机或座机
+    MONGOID = 11
+    IPV4 = 12
+    IPV6 = 13
+    DATETIME = 14
+    DATE = 15
+    POSITIVE = 16   # 正实数 转换为float
+    NEGATIVE = 17   # 负实数 转换为float
 
 
 class Validator(object):
@@ -119,6 +149,24 @@ class Validator(object):
                     self.error.append('参数非整型：%s' % key)
                 else:
                     self.data[key] = v
+            elif vtype == VType.POSITIVE:
+                try:
+                    v = float(v)
+                    if v <= 0:
+                        raise ValueError()
+                except ValueError:
+                    self.error.append('参数须为正数：%s' % key)
+                else:
+                    self.data[key] = v
+            elif vtype == VType.NEGATIVE:
+                try:
+                    v = float(v)
+                    if v >= 0:
+                        raise ValueError()
+                except ValueError:
+                    self.error.append('参数须为负数：%s' % key)
+                else:
+                    self.data[key] = v
             elif vtype == VType.STRING:
                 try:
                     v = str(v)
@@ -148,7 +196,7 @@ class Validator(object):
             elif vtype == VType.LIST:
                 if isinstance(v, list):
                     self.data[key] = v
-                if isinstance(v, str):
+                elif isinstance(v, str):
                     try:
                         v = json.loads(v)
                     except json.JSONDecodeError:
@@ -200,10 +248,15 @@ class Validator(object):
                 else:
                     self.error.append('参数非json：%s' % key)
             elif vtype == VType.MOBILEPHONE:
+                if isMobilePhone(v):
+                    self.data[key] = v
+                else:
+                    self.error.append('无效手机号：%s' % key)
+            elif vtype == VType.PHONE:
                 if isPhone(v):
                     self.data[key] = v
                 else:
-                    self.error.append('参数非手机号：%s' % key)
+                    self.error.append('无效电话号码：%s' % key)
             elif vtype == VType.MONGOID:
                 if isMongoId(v):
                     self.data[key] = v
@@ -218,8 +271,29 @@ class Validator(object):
                 # TODO xxxx
                 self.data[key] = v
                 pass
+            elif vtype == VType.DATETIME:
+                dtformat = self.data.get('format')
+                tfrmt_re = dtformat or _DATETIME_DEFAULT
+                try:
+                    self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
+                except ValueError:
+                    self.error.append('参数时间格式不匹配')
+            elif vtype == VType.DATE:
+                dtformat = self.data.get('format')
+                tfrmt_re = dtformat or _DATE_DEFAULT
+                try:
+                    self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
+                except ValueError:
+                    self.error.append('参数日期格式不匹配')
             else:
                 raise ValueError('无效验证参数类型：%s' % key)
+        if 'in' in _format:
+            vals = _format['in']
+            if isinstance(vals, (Iterable, )):
+                if v not in vals:
+                    self.error.append('参数不符合范围：%s' % key)
+                else:
+                    self.data[key] = v
         if 'test' in _format:
             test = _format['test']
             if isinstance(test, object) and callable(test):
