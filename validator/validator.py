@@ -211,7 +211,7 @@ class Validator(object):
             elif vtype == VType.DICT:
                 if isinstance(v, dict):
                     self.data[key] = v
-                if isinstance(v, str):
+                elif isinstance(v, str):
                     try:
                         v = json.loads(v)
                     except json.JSONDecodeError:
@@ -238,7 +238,7 @@ class Validator(object):
             elif vtype == VType.JSON:
                 if isinstance(v, object):
                     self.data[key] = v
-                if isinstance(v, str):
+                elif isinstance(v, str):
                     try:
                         v = json.loads(v)
                     except json.JSONDecodeError:
