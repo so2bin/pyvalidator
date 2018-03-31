@@ -129,7 +129,7 @@ class Validator(object):
         :param _format: object, {'type', 'default', 'test': [validate functions]}
         :return:
         """
-        if not data or not (key and _format):
+        if (data is None or not isinstance(data, object)) or not (key and _format):
             raise ValueError('参数错误')
         if key not in data:
             if 'default' in _format:
