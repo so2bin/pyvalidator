@@ -169,10 +169,17 @@ class Validator(object):
                     self.data[key] = v
             elif vtype == VType.STRING:
                 try:
-                    v = str(v)
+                    if v:
+                        v = str(v)
+                    else:
+                        v = _format['default'] if 'default' in _format else ''
                 except ValueError:
                     self.error.append('参数非字符串：%s' % key)
                 else:
+                    if 'max_len' in _format:
+                        mxl = _format['max_len']
+                        if len(v) > mxl:
+                            self.error.append(f'"{v}"长度不能大于{mxl}')
                     self.data[key] = v
             elif vtype == VType.FLOAT:
                 try:
