@@ -139,7 +139,7 @@ class Validator(object):
                 if _format.get('must') is True:
                     self.error.append('缺少参数：%s' % key)
                 return
-        if self.data['key'] is None and 'default' in _format:
+        if self.data[key] is None and 'default' in _format:
             self.data[key] = _format.get('default', None)
             return
         v = data[key]
