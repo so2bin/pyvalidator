@@ -139,6 +139,9 @@ class Validator(object):
                 if _format.get('must') is True:
                     self.error.append('缺少参数：%s' % key)
                 return
+        if self.data['key'] is None and 'default' in _format:
+            self.data[key] = _format.get('default', None)
+            return
         v = data[key]
         if 'type' in _format:
             vtype = _format['type']
@@ -283,14 +286,14 @@ class Validator(object):
                 tfrmt_re = dtformat or _DATETIME_DEFAULT
                 try:
                     self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
-                except ValueError or TypeError:
+                except (ValueError, TypeError):
                     self.error.append('参数时间格式不匹配')
             elif vtype == VType.DATE:
                 dtformat = _format.get('format')
                 tfrmt_re = dtformat or _DATE_DEFAULT
                 try:
                     self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
-                except ValueError or TypeError:
+                except (ValueError, TypeError):
                     self.error.append('参数日期格式不匹配')
             else:
                 raise ValueError('无效验证参数类型：%s' % key)
