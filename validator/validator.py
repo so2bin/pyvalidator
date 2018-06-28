@@ -278,19 +278,19 @@ class Validator(object):
                 # TODO xxxx
                 self.data[key] = v
                 pass
-            elif vtype == VType.DATETIME:
+            elif vtype == VType.:
                 dtformat = _format.get('format')
                 tfrmt_re = dtformat or _DATETIME_DEFAULT
                 try:
                     self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
-                except ValueError:
+                except ValueError or TypeError:
                     self.error.append('参数时间格式不匹配')
             elif vtype == VType.DATE:
                 dtformat = _format.get('format')
                 tfrmt_re = dtformat or _DATE_DEFAULT
                 try:
                     self.data[key] = datetime.datetime.strptime(v, tfrmt_re)
-                except ValueError:
+                except ValueError or TypeError:
                     self.error.append('参数日期格式不匹配')
             else:
                 raise ValueError('无效验证参数类型：%s' % key)
