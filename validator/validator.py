@@ -281,7 +281,7 @@ class Validator(object):
                 # TODO xxxx
                 self.data[key] = v
                 pass
-            elif vtype == VType.:
+            elif vtype == VType.DATETIME:
                 dtformat = _format.get('format')
                 tfrmt_re = dtformat or _DATETIME_DEFAULT
                 try:
